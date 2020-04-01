@@ -24,13 +24,13 @@
       changed_when: false
       failed_when: >-
         ansible_distribution not in targets.keys()
-        and (ansible_distribution_version not in target_versions
-        or ansible_distribution_major_version not in target_versions)
+        or (ansible_distribution_release not in target_versions
+        and ansible_distribution_version not in target_versions)
       vars:
         targets:
           CentOS: ["7.6", "7.7", "8.0", "8.1"]
-          Debian: ["8", "9", "10"]
-          Ubuntu: ["16.04", "18.04"]
+          Debian: ["jessie", "stretch", "buster"]
+          Ubuntu: ["xenial", "bionic"]
         target_versions: "{{ targets[ansible_distribution] }}"
 
     - name: check if this host is managed by Ansible
