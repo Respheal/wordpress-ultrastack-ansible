@@ -1,11 +1,17 @@
 ---
 # site.deploy.yml
 
+# To deploy the LAMP and UltraStack playbooks, we want to first ensure the
+# host meets basic requirements. We don't need to gather facts (gather_facts)
+# about this point. If any of the pretasks or tasks return an error, we will
+# abort the deployment (any_errors_fatal).
 - name: check that hosts meet the basic requirements
   any_errors_fatal: true
   gather_facts: false
   hosts: all
 
+  # Pretask: Confirm Python exists on the host. If Python exists, we'll collect
+  # facts about the host (setup) for use in subsequent tasks.
   pre_tasks:
     - name: check if some version of Python is installed and accessible
       raw: |-
@@ -15,7 +21,13 @@
     - name: Gather facts for later tasks
       setup:
 
+  # Tasks to check for the OS, LAMP services, and if Ansible
+  # is managing the host.
   tasks:
+    # Check for the following supported OSs:
+    # Centos: 7.6, 7.7, 8.0, 8.1
+    # Debian: Jessie (8), Stretch (9), Buster (10)
+    # Ubuntu: Xenial Xerus (16.04), Bionic Beaver (18.04)
     - name: check if host OS is supported
       fail:
         msg: >-
@@ -33,6 +45,8 @@
           Ubuntu: ["xenial", "bionic"]
         target_versions: "{{ targets[ansible_distribution] }}"
 
+    # Check if this host is managed by Ansible by the existance
+    # of the file '/etc/ansible/wordpress-ultrastack'.
     - name: check if this host is managed by Ansible
       command: >
         ls /etc/ansible/wordpress-ultrastack
