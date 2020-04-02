@@ -24,8 +24,8 @@
   # Tasks to check for the OS, LAMP services, and if Ansible
   # is managing the host.
   tasks:
-    # Check for the following supported OSs:
-    # Centos: 7.6, 7.7, 8.0, 8.1
+    # Check for the following supported OSs on the host:
+    # CentOS: 7.6, 7.7, 8.0, 8.1
     # Debian: Jessie (8), Stretch (9), Buster (10)
     # Ubuntu: Xenial Xerus (16.04), Bionic Beaver (18.04)
     - name: check if host OS is supported
@@ -47,6 +47,7 @@
 
     # Check if this host is managed by Ansible by the existance
     # of the file '/etc/ansible/wordpress-ultrastack'.
+    # If the file doesn't exist, ansible_deployed.changed is True.
     - name: check if this host is managed by Ansible
       command: >
         ls /etc/ansible/wordpress-ultrastack
@@ -54,6 +55,9 @@
       failed_when: false
       register: ansible_deployed
 
+    # If ansible_deployed.changed is True, check for core LAMP services
+    # by checking their respective commands.
+    # If LAMP services already exist, lamp_installed.changed is True.
     - name: check if core LAMP services are present
       command: >
         command -v {{ item }}
@@ -68,6 +72,9 @@
       when:
         - ansible_deployed.changed
 
+    # If lamp_installed.changed and ansible_deployed.changed are both True,
+    # LAMP services are installed but the host isn't managed by Ansible.
+    # Abort the run and advise the removal of the LAMP services.
     - name: Fail if Ansible isn't managing this host
       fail:
         msg: >
@@ -79,17 +86,22 @@
         - lamp_installed.changed
         - ansible_deployed.changed
 
+# If we haven't failed by this point, we're ready to prep for
+# service and WordPress deployment.
 - name: Deploy WordPress to defined hosts in the 'wordpress' group
   any_errors_fatal: true
   gather_facts: false
   hosts: wordpress
 
+  # Create '/etc/ansible'.
   pre_tasks:
     - name: Create /etc/ansible
       file:
         path: /etc/ansible
         state: directory
 
+    # Touch '/etc/ansible/wordpress-ultrastack' to mark this host as
+    # being managed by Ansible.
     - name: Add file confirming this host is managed by Ansible
       file:
         path: /etc/ansible/wordpress-ultrastack
@@ -97,6 +109,7 @@
         access_time: preserve
         modification_time: preserve
 
+  # Install the LAMP services and WordPress UltraStack packages.
   roles:
     - role: inmotionhosting.apache
     - role: inmotionhosting.mysql
